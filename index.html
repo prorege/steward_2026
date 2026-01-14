@@ -440,10 +440,10 @@
             }
         }
     </style>
-</head>
-<body>
     <!-- Axios CDN -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
     <div class="container">
         <header class="header">
             <h1>안디옥교회 2026 청지기</h1>
@@ -586,7 +586,7 @@
         }
         
         // 데이터 로드 (axios 사용)
-        axios.get('data.json')
+        axios.get('https://antioch-steward.netlify.app/data.json')
             .then(response => {
                 // data.members에서 멤버 데이터 추출
                 memberData = response.data.members;
