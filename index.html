@@ -213,76 +213,105 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
+        .member-header {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        
         .member-name {
             font-size: 1.25rem;
             font-weight: 700;
             color: var(--text-dark);
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 6px;
         }
         
-        .member-name .position-tag {
+        .jejik-badge {
+            display: inline-block;
+            background: var(--primary-dark);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 600;
         }
         
         .member-church {
             font-size: 0.85rem;
             color: var(--primary);
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             font-weight: 500;
         }
         
-        .member-stats {
-            font-size: 0.8rem;
-            color: var(--text-muted);
+        .committee-section {
             margin-bottom: 12px;
         }
         
-        .positions-title {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .committee-section:last-child {
+            margin-bottom: 0;
         }
         
-        .positions {
+        .committee-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 6px;
+            padding: 4px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+        
+        .department-item {
+            margin-left: 8px;
+            margin-bottom: 6px;
+        }
+        
+        .department-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+        
+        .position-list {
+            margin-left: 12px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        
+        .position-item {
+            display: inline;
+        }
+        
+        .position-item:not(:last-child)::after {
+            content: ", ";
+        }
+        
+        .other-positions {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dotted var(--border);
+        }
+        
+        .other-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        
+        .other-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 4px;
         }
         
-        .position-tag {
-            background: var(--primary);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 16px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        
-        .position-tag.jejik {
-            background: var(--primary-dark);
-        }
-        
-        .position-tag.praise {
-            background: #8b5a2b;
-        }
-        
-        .position-tag.edu {
-            background: #2e7d6b;
-        }
-        
-        .position-tag.org {
-            background: #4a6fa5;
-        }
-        
-        .position-tag.branch {
-            background: #7d5a50;
+        .other-tag {
+            background: var(--border);
+            color: var(--text-muted);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
         }
         
         .search-hint, .no-result {
@@ -439,17 +468,11 @@
                 font-size: 1.1rem;
             }
             
-            .position-tag {
-                padding: 4px 10px;
-                font-size: 0.7rem;
-            }
-            
             .search-hint .icon, .no-result .icon {
                 font-size: 40px;
             }
         }
     </style>
-    <!-- Axios CDN -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
@@ -469,10 +492,8 @@
                 <button id="searchBtn" disabled>검색</button>
             </div>
             <div class="stats">
-                <span>👥 <strong id="totalCount">-</strong>명</span>
-                <span>📋 <strong>521</strong>직분</span>
-                <span>🏠 구미 <strong id="gumiCount">-</strong></span>
-                <span>🏢 서울 <strong id="seoulCount">-</strong></span>
+                <span>🏠 구미 직분자 및 동역자 : <strong id="gumiCount">-</strong></span>
+                <span>🏢 서울 직분자 및 동역자 : <strong id="seoulCount">-</strong></span>
             </div>
         </div>
         
@@ -487,6 +508,88 @@
     <script>
         // 전역 변수
         let memberData = null;
+        let orgStructure = null;
+        let positionToOrgMap = null;
+        
+        // 제직 목록
+        const jejikList = ['장로', '안수집사', '권사', '서리집사(남)', '서리집사(여)', '권찰', '명예장로', '명예권사', '취임집사', '취임권사', '취임 권사', '협동 안수집사', '협동 장로', '협동 권사', '집사', '명예 권사', '취임장로'];
+        
+        // 특별 직함 (이름 -> 직함)
+        const specialTitles = {
+            '김은원': '부목사',
+            '심준호': '부목사',
+            '이상헌': '부목사',
+            '김인철': '전도사',
+            '최복남': '전도사',
+            '김형원': '전도사',
+            '박연실': '사모',
+            '박애숙': '사모',
+            '김현지': '사모',
+            '김상미': '사모',
+            '박지윤': '사모'
+        };
+        
+        // 조직 구조 정의
+        const organizationStructure = {
+            "목회지원팀": {
+                type: "team",
+                departments: ["목회지원팀"]
+            },
+            "예배위원회": {
+                type: "committee",
+                departments: {
+                    "예배국": ["예배국"],
+                    "찬양국": ["찬양국", "샬롬찬양대", "할렐루야찬양대", "호산나찬양대", "중창단", "오케스트라", "참소리"],
+                    "재정국": ["재정국", "지출부"]
+                }
+            },
+            "교육훈련위원회": {
+                type: "committee",
+                departments: {
+                    "교육국": ["교육국", "태영아부", "유치부", "유년부", "유초등부", "초등부", "중등부", "고등부", "중고등부", "대학부", "대학청년회", "청년1(대학)", "청년2", "청년회", "영어예배부", "중국어예배부"],
+                    "훈련국": ["훈련국", "디모데제자원"]
+                }
+            },
+            "사무위원회": {
+                type: "committee",
+                departments: {
+                    "사무국": ["사무국"],
+                    "경조국": ["경조국"],
+                    "차량국": ["차량국"],
+                    "시설안전국": ["시설국", "시설안전국"]
+                }
+            },
+            "선교위원회": {
+                type: "committee",
+                departments: {
+                    "해외선교국": ["해외선교국"],
+                    "국내선교국": ["국내선교국"],
+                    "평신도선교국": ["평신도선교국"],
+                    "미디어선교국": ["미디어선교국"],
+                    "산업선교국": ["산업선교국"],
+                    "공단선교국": ["공단선교국"],
+                    "농아인선교국": ["농아인선교국", "수화통역자"],
+                    "체육선교국": ["체육선교국"]
+                }
+            },
+            "일천지교회": {
+                type: "committee",
+                departments: {
+                    "지교회": ["강서지교회", "거창지교회", "경주지교회", "대전지교회", "몽골지교회", "북대구지교회", "북부산지교회", "부여지교회", "분당본교회", "분당지교회", "상주지교회", "서대구지교회", "성남위례지교회", "성주지교회", "수원지교회", "영주지교회", "일본지교회", "일산지교회", "창원지교회", "청도지교회", "포항지교회", "필리핀"],
+                    "전문교회": ["공단전문교회", "구평진평전문교회", "고려대전문교회", "도량원호전문교회", "대만전문교회", "봉곡전문교회", "북삼전문교회", "상모사곡임은전문교회", "석적전문교회", "신평비산전문교회", "연세대전문교회", "오태전문교회", "옥계전문교회", "형곡전문교회"],
+                    "위성지역": ["위성지역"],
+                    "전국지역": ["전국지역"],
+                    "국가별후원담당": ["네팔", "대만", "동북아", "라오스", "레바논", "말레이시아", "멕시코", "모로코", "몽골", "미얀마", "방글라데시", "베트남", "브라질", "브루나이", "스리랑카", "싱가포르", "아르헨티나", "아제르바이잔", "이란", "이스라엘", "인도", "인도네시아", "일본", "카자흐스탄", "캄보디아", "케냐", "키르기스스탄", "태국", "튀르키예", "필리핀", "홍콩"]
+                }
+            },
+            "기관임원": {
+                type: "committee",
+                departments: {
+                    "남전도회": ["제1남전도회", "제2남전도회", "제3남전도회", "제4남전도회"],
+                    "여전도회": ["여전도회", "제1여전도회", "제2여전도회", "제3여전도회", "제4여전도회", "제5여전도회", "제6여전도회", "꽃꽂이부", "교회청소담당"]
+                }
+            }
+        };
         
         // 테마 토글
         const themeToggle = document.getElementById('themeToggle');
@@ -511,21 +614,165 @@
             }
         });
         
-        // 태그 분류 (첫 단어 기준)
-        const jejikList = ['권사', '권찰', '명예', '명예권사', '명예장로', '서리집사(남)', '서리집사(여)', '안수집사', '장로', '집사', '취임', '취임권사', '취임장로', '취임집사', '협동'];
-        const praiseList = ['샬롬찬양대', '오케스트라', '중창단', '찬양국', '찬양대', '참소리', '참소리찬양선교단', '할렐루야찬양대', '호산나찬양대'];
-        const eduList = ['고등부', '교육국', '대학부', '대학청년회', '디모데제자원', '유년부', '유초등부', '유치부', '중고등부', '중등부', '청년1(대학)', '청년2', '청년회', '초등부', '태영아부', '훈련국'];
-        const orgList = ['건축행정부', '경조국', '공단선교국', '국내선교국', '꽃꽂이부', '농아인선교국', '목회지원팀', '미디어선교국', '사무국', '산업선교국', '시설국', '시설안전국', '안내위원부', '여전도회', '예배국', '외국인부', '영어예배부', '재정국', '제1남전도회', '제1여전도회', '제2남전도회', '제2여전도회', '제3남전도회', '제3여전도회', '제4남전도회', '제4여전도회', '제5여전도회', '제6여전도회', '중국어예배부', '지출부', '차량국', '체육선교국', '평신도선교국', '해외선교국', '교회청소담당', '수화통역자'];
-        const branchList = ['강서지교회', '거창지교회', '경주지교회', '고려대전문교회', '공단전문교회', '구평진평전문교회', '대만전문교회', '대전지교회', '도량원호전문교회', '몽골지교회', '봉곡전문교회', '부여지교회', '북대구지교회', '북부산지교회', '북삼전문교회', '분당본교회', '분당지교회', '서대구지교회', '석적전문교회', '성남위례지교회', '성주지교회', '수원지교회', '신평비산전문교회', '연세대전문교회', '영주지교회', '오태전문교회', '옥계전문교회', '위성지역-경산청도', '위성지역-군위', '위성지역-김천', '위성지역-문경', '위성지역-선산', '위성지역-영덕', '위성지역-왜관', '위성지역-울산', '위성지역-원주', '위성지역-진주', '위성지역-칠곡', '위성지역-평택', '일본지교회', '일산지교회', '전국지역-강원원주', '전국지역-강원춘천', '전국지역-경기과천', '전국지역-경기김포', '전국지역-경기남양주', '전국지역-경기성남', '전국지역-경기안성', '전국지역-경기오산', '전국지역-경기평택', '전국지역-경기화성', '전국지역-경남마산', '전국지역-경남창원', '전국지역-경북경산', '전국지역-경북김천', '전국지역-경북영천', '전국지역-경북점촌', '전국지역-대구달성', '전국지역-대구북구', '전국지역-대구서구', '전국지역-대전유성', '전국지역-부산중구', '전국지역-부산해운대', '전국지역-서울강남', '전국지역-서울관악', '전국지역-서울송파', '전국지역-영덕울진', '전국지역-울산동구', '전국지역-전남목포', '전국지역-충남천안', '전국지역-충북청주', '창원지교회', '청도지교회', '포항지교회', '형곡전문교회', '상모사곡임은전문교회', '상주지교회', '네팔', '대만', '동북아A', '동북아A1', '동북아A2', '동북아A3', '라오스', '레바논', '말레이시아', '멕시코', '모로코', '몽골', '미얀마', '방글라데시', '베트남', '브라질', '브루나이', '스리랑카', '싱가포르', '아르헨티나', '아제르바이잔', '이란', '이스라엘', '인도', '인도네시아', '일본', '카자흐스탄', '캄보디아', '케냐', '키르기스스탄', '태국', '튀르키예', '필리핀', '홍콩'];
+        // 직분을 조직에 매핑하는 함수
+        function mapPositionToOrg(position) {
+            for (const [committeeName, committee] of Object.entries(organizationStructure)) {
+                if (committee.type === "team") {
+                    for (const prefix of committee.departments) {
+                        if (position.startsWith(prefix)) {
+                            return { committee: committeeName, department: null };
+                        }
+                    }
+                } else {
+                    for (const [deptName, prefixes] of Object.entries(committee.departments)) {
+                        for (const prefix of prefixes) {
+                            if (position.startsWith(prefix) || position.includes(prefix)) {
+                                return { committee: committeeName, department: deptName };
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
         
-        function getTagClass(pos) {
-            const firstWord = pos.split(' ')[0];
-            if (jejikList.includes(firstWord)) return 'jejik';
-            if (praiseList.includes(firstWord)) return 'praise';
-            if (eduList.includes(firstWord)) return 'edu';
-            if (branchList.includes(firstWord)) return 'branch';
-            if (orgList.includes(firstWord)) return 'org';
-            return '';
+        // 직분에서 부서명을 제거하고 짧은 이름 반환
+        function getShortPositionName(position, department) {
+            // 부서 접두어 제거
+            let shortName = position;
+            
+            // 일반적인 국/부 접두어 패턴 제거
+            const prefixPatterns = [
+                /^(예배국|찬양국|재정국|교육국|훈련국|사무국|경조국|차량국|시설국|시설안전국|해외선교국|국내선교국|평신도선교국|미디어선교국|산업선교국|공단선교국|농아인선교국|체육선교국|목회지원팀)\s*/,
+            ];
+            
+            for (const pattern of prefixPatterns) {
+                shortName = shortName.replace(pattern, '');
+            }
+            
+            return shortName || position;
+        }
+        
+        // 제직 여부 확인
+        function isJejik(position) {
+            return jejikList.includes(position);
+        }
+        
+        // 제직 추출
+        function extractJejik(positions) {
+            return positions.filter(p => isJejik(p));
+        }
+        
+        // 직분 분류
+        function categorizePositions(positions) {
+            const result = {
+                jejik: [],
+                organized: {}, // { committeeName: { deptName: [positions] } }
+                others: []
+            };
+            
+            const uniquePositions = [...new Set(positions)];
+            
+            for (const pos of uniquePositions) {
+                if (isJejik(pos)) {
+                    if (!result.jejik.includes(pos)) {
+                        result.jejik.push(pos);
+                    }
+                    continue;
+                }
+                
+                const org = mapPositionToOrg(pos);
+                if (org) {
+                    const { committee, department } = org;
+                    if (!result.organized[committee]) {
+                        result.organized[committee] = {};
+                    }
+                    const deptKey = department || '_direct';
+                    if (!result.organized[committee][deptKey]) {
+                        result.organized[committee][deptKey] = [];
+                    }
+                    result.organized[committee][deptKey].push(pos);
+                } else {
+                    result.others.push(pos);
+                }
+            }
+            
+            return result;
+        }
+        
+        // 검색 결과 HTML 생성
+        function renderMemberCard(name, info, query) {
+            const categorized = categorizePositions(info.positions);
+            const highlightedName = name.replace(new RegExp(query, 'g'), '<span class="highlight">' + query + '</span>');
+            const churchName = info.church ? info.church + '안디옥교회' : '안디옥교회';
+            
+            // 이름에서 숫자 제거하여 특별 직함 확인 (예: 김미정1 -> 김미정)
+            const baseName = name.replace(/\d+$/, '');
+            
+            // 제직 표시 (특별 직함 > 일반 제직 > 성도)
+            let jejikDisplay = '성도';
+            if (specialTitles[baseName]) {
+                jejikDisplay = specialTitles[baseName];
+            } else if (specialTitles[name]) {
+                jejikDisplay = specialTitles[name];
+            } else if (categorized.jejik.length > 0) {
+                jejikDisplay = categorized.jejik.join(', ');
+            }
+            
+            let html = '<div class="result-card">';
+            html += '<div class="member-header">';
+            html += '<span class="member-name">' + highlightedName + '</span>';
+            html += '<span class="jejik-badge">' + jejikDisplay + '</span>';
+            html += '</div>';
+            html += '<div class="member-church">⛪ ' + churchName + '</div>';
+            
+            // 위원회별 직분 표시
+            const committeeOrder = ['목회지원팀', '예배위원회', '교육훈련위원회', '사무위원회', '선교위원회', '일천지교회', '기관임원'];
+            
+            for (const committeeName of committeeOrder) {
+                if (!categorized.organized[committeeName]) continue;
+                
+                const depts = categorized.organized[committeeName];
+                const deptKeys = Object.keys(depts);
+                if (deptKeys.length === 0) continue;
+                
+                html += '<div class="committee-section">';
+                html += '<div class="committee-title">' + committeeName + '</div>';
+                
+                for (const deptKey of deptKeys) {
+                    const positions = depts[deptKey];
+                    if (positions.length === 0) continue;
+                    
+                    html += '<div class="department-item">';
+                    if (deptKey !== '_direct') {
+                        html += '<div class="department-name">[' + deptKey + ']</div>';
+                    }
+                    html += '<div class="position-list">';
+                    
+                    const shortNames = positions.map(p => getShortPositionName(p, deptKey));
+                    html += shortNames.map(n => '<span class="position-item">' + n + '</span>').join('');
+                    
+                    html += '</div>';
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+            }
+            
+            // 기타 직분 (분류되지 않은 것)
+            if (categorized.others.length > 0) {
+                html += '<div class="other-positions">';
+                html += '<div class="other-title">기타</div>';
+                html += '<div class="other-list">';
+                for (const pos of categorized.others) {
+                    html += '<span class="other-tag">' + pos + '</span>';
+                }
+                html += '</div>';
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            return html;
         }
         
         // 검색 함수
@@ -554,30 +801,7 @@
             let html = '<div class="result-count">"' + query + '" 검색 결과: <strong>' + results.length + '</strong>명</div>';
             
             results.slice(0, 50).forEach(([name, info]) => {
-                // 제직(jejik)과 나머지 직분 분리
-                const jejikPositions = [];
-                const otherPositions = [];
-                
-                info.positions.forEach(pos => {
-                    const tagClass = getTagClass(pos);
-                    const tag = '<span class="position-tag ' + tagClass + '">' + pos + '</span>';
-                    if (tagClass === 'jejik') {
-                        jejikPositions.push(tag);
-                    } else {
-                        otherPositions.push(tag);
-                    }
-                });
-                
-                const highlightedName = name.replace(new RegExp(query, 'g'), '<span class="highlight">' + query + '</span>');
-                const churchName = info.church ? info.church + '안디옥교회' : '안디옥교회';
-                const jejikHtml = jejikPositions.length > 0 ? ' ' + jejikPositions.join(' ') : '';
-                
-                html += '<div class="result-card">' +
-                    '<div class="member-name">' + highlightedName + jejikHtml + '</div>' +
-                    '<div class="member-church">📍 ' + churchName + '</div>' +
-                    '<div class="member-stats">🏷️ ' + (info.positions.length-1) + '개 직분</div>' +
-                    (otherPositions.length > 0 ? '<div class="positions-title">담당 직분</div><div class="positions">' + otherPositions.join('') + '</div>' : '') +
-                '</div>';
+                html += renderMemberCard(name, info, query);
             });
             
             if (results.length > 50) {
@@ -591,7 +815,6 @@
         function updateStats() {
             if (!memberData) return;
             
-            const total = Object.keys(memberData).length;
             let gumi = 0, seoul = 0;
             
             Object.values(memberData).forEach(info => {
@@ -599,38 +822,31 @@
                 else if (info.church === '서울') seoul++;
             });
             
-            document.getElementById('totalCount').textContent = total;
             document.getElementById('gumiCount').textContent = gumi;
             document.getElementById('seoulCount').textContent = seoul;
         }
         
-        // 데이터 로드 (axios 사용)
+        // 데이터 로드
         axios.get('data.json')
             .then(response => {
-                // 문자열이면 JSON 파싱
                 let data = response.data;
                 if (typeof data === 'string') {
-                    // JSON 전처리: 빈 줄, trailing comma 등 처리
                     data = data
                         .split('\n')
-                        .map(line => line.trimEnd())      // 각 줄 끝 공백 제거
-                        .filter(line => line.trim() !== '') // 빈 줄 제거
+                        .map(line => line.trimEnd())
+                        .filter(line => line.trim() !== '')
                         .join('\n')
-                        .replace(/,(\s*[\]\}])/g, '$1');  // trailing comma 제거
+                        .replace(/,(\s*[\]\}])/g, '$1');
                     data = JSON.parse(data);
                 }
                 
-                // data.members에서 멤버 데이터 추출
                 memberData = data.members;
                 
-                // UI 활성화
                 document.getElementById('searchInput').disabled = false;
                 document.getElementById('searchBtn').disabled = false;
                 
-                // 통계 업데이트
                 updateStats();
                 
-                // 초기 화면
                 document.getElementById('results').innerHTML = 
                     '<div class="search-hint">' +
                     '<div class="icon">🔍</div>' +
@@ -638,7 +854,6 @@
                     '<div class="hint-text">부분 검색 가능 (예: "김" → 김씨 전체)</div>' +
                     '</div>';
                 
-                // 이벤트 리스너 등록
                 document.getElementById('searchBtn').addEventListener('click', () => {
                     search(document.getElementById('searchInput').value);
                 });
