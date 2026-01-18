@@ -498,6 +498,10 @@
                 <input type="text" id="searchInput" placeholder="이름을 입력하세요" autocomplete="off" enterkeyhint="search" disabled>
                 <button id="searchBtn" disabled>검색</button>
             </div>
+            <div class="stats">
+                <span>🏠 구미 직분자 및 동역자<strong id="gumiCount">-</strong></span>
+                <span>🏢 서울 직분자 및 동역자<strong id="seoulCount">-</strong></span>
+            </div>
         </div>
         
         <div class="results" id="results">
@@ -707,8 +711,8 @@
         function renderMemberCard(name, info, query) {
             const categorized = categorizePositions(info.positions);
             const highlightedName = name.replace(new RegExp(query, 'g'), '<span class="highlight">' + query + '</span>');
+            const churchEmoji = info.church === '서울' ? '🏢' : '🏠';
             const churchName = info.church ? info.church + '안디옥교회' : '안디옥교회';
-            
             // 이름에서 숫자 제거하여 특별 직함 확인 (예: 김미정1 -> 김미정)
             const baseName = name.replace(/\d+$/, '');
             
@@ -727,7 +731,7 @@
             html += '<span class="member-name">' + highlightedName + '</span>';
             html += '<span class="jejik-badge">' + jejikDisplay + '</span>';
             html += '</div>';
-            html += '<div class="member-church">⛪ ' + churchName + '</div>';
+            html += '<div class="member-church">' + churchEmoji + ' ' + churchName + '</div>';
             
             // 위원회별 직분 표시
             const committeeOrder = ['목회지원팀', '예배위원회', '교육훈련위원회', '사무위원회', '선교위원회', '일천지교회', '기관임원'];
