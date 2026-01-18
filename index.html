@@ -498,10 +498,6 @@
                 <input type="text" id="searchInput" placeholder="이름을 입력하세요" autocomplete="off" enterkeyhint="search" disabled>
                 <button id="searchBtn" disabled>검색</button>
             </div>
-            <div class="stats">
-                <span>🏠 구미 직분자 및 동역자 : <strong id="gumiCount">-</strong></span>
-                <span>🏢 서울 직분자 및 동역자 : <strong id="seoulCount">-</strong></span>
-            </div>
         </div>
         
         <div class="results" id="results">
@@ -828,9 +824,6 @@
                 if (info.church === '구미') gumi++;
                 else if (info.church === '서울') seoul++;
             });
-            
-            document.getElementById('gumiCount').textContent = gumi;
-            document.getElementById('seoulCount').textContent = seoul;
         }
         
         // 데이터 로드
